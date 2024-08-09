@@ -50,3 +50,11 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+Azur/*
+\[Windows\]\[Conan\] Conan errors out whilst trying to create vs solution · Issue \#738 · rwengine-openrw.url
+build-cg/*
+Capture d’écran 2024-08-09 024023.png
+calcemu
+make.bat
+3D.g3a
+.vscode/*
