@@ -7,20 +7,6 @@
 
 #include "Projection.h"
 
-/*void DrawFilledCube(Vector2 render_points[8])
-{
-    //DrawFilledQuad((Vector2[]){render_points[0], render_points[1], render_points[2], render_points[3]},C_WHITE);
-    DrawFilledQuad((Vector2[]){render_points[4], render_points[5], render_points[6], render_points[7]},C_WHITE);
-    if (render_points[0].y < render_points[4].y)
-        DrawFilledQuad((Vector2[]){render_points[0], render_points[1], render_points[5], render_points[4]},C_BLUE);
-    if (render_points[5].x < render_points[1].x)
-        DrawFilledQuad((Vector2[]){render_points[5], render_points[1], render_points[2], render_points[6]},C_GREEN);
-    if (render_points[6].y < render_points[2].y)
-        DrawFilledQuad((Vector2[]){render_points[3], render_points[2], render_points[6], render_points[7]},C_BLUE);
-    if (render_points[3].x < render_points[7].x)
-        DrawFilledQuad((Vector2[]){render_points[0], render_points[4], render_points[7], render_points[3]},C_GREEN);
-}*/
-
 RenderQuad quads[512];
 size_t quad_count = 0;
 
@@ -72,19 +58,19 @@ int DetectInRange(Camera* camera, Vector3 position)
     fixed_t z = INT_TO_FIXED(position.z - camera->transform.position.z);
 
     /* Calcul du cosinus et sinus de l'angle de rotation de la caméra en fixed-point */
-    fixed_t cos_theta = fcos_approx(FLOAT_TO_FIXED(camera->transform.rotation.x));
-    fixed_t sin_theta = fsin_approx(FLOAT_TO_FIXED(camera->transform.rotation.x));
+    const fixed_t cos_theta = fcos_approx(FLOAT_TO_FIXED(camera->transform.rotation.x));
+    const fixed_t sin_theta = fsin_approx(FLOAT_TO_FIXED(camera->transform.rotation.x));
 
     /* Application de la rotation autour de l'axe X */
-    fixed_t new_y = fmul(y, cos_theta) - fmul(z, sin_theta);
-    fixed_t new_z = fmul(y, sin_theta) + fmul(z, cos_theta);
+    const fixed_t new_y = fmul(y, cos_theta) - fmul(z, sin_theta);
+    const fixed_t new_z = fmul(y, sin_theta) + fmul(z, cos_theta);
     y = new_y;
     z = new_z;
 
     /* Projection en coordonnées écran */
     if (z <= 0)
         return 0;
-    fixed_t f = fdiv(INT_TO_FIXED(300), z);
+    const fixed_t f = fdiv(INT_TO_FIXED(300), z);
     x = fmul(x, f);
     y = fmul(y, f);
 
@@ -167,7 +153,7 @@ void DrawBlock(Camera* camera, Vector3 position)
 
 int main(){
     srand(time(NULL));
-    clock_set_speed(CLOCK_SPEED_F5);
+    //clock_set_speed(CLOCK_SPEED_F5);
     init_uv_map();
     Camera camera = (Camera){(Vector3){0,0,-500},(Vector3f){0,0,0},(Vector3f){1,1,1}};
     while (!keydown(KEY_MENU))

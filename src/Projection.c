@@ -85,7 +85,8 @@ inline static void ApplyRotationZ(fixed_t *x, fixed_t *y, fixed_t cos_theta, fix
 
 void CalculateProjection(Camera *camera, Projection* obj)
 {
-    const Vector2 center = {INT_TO_FIXED(SCREEN_WIDTH / 2), INT_TO_FIXED(SCREEN_HEIGHT / 2)};
+    const fixed_t half_screen_width = INT_TO_FIXED(SCREEN_WIDTH / 2);
+    const fixed_t half_screen_height = INT_TO_FIXED(SCREEN_HEIGHT / 2);
 
     /* Pré-calcul des cos et sin pour la rotation de l'obj */
     const fVector3 cos_transform = {
@@ -118,6 +119,7 @@ void CalculateProjection(Camera *camera, Projection* obj)
         fcos_approx(FLOAT_TO_FIXED(camera->transform.rotation.y)),
         fcos_approx(FLOAT_TO_FIXED(camera->transform.rotation.z))
     };
+
     const fVector3 sin_camera = {
         fsin_approx(FLOAT_TO_FIXED(camera->transform.rotation.x)),
         fsin_approx(FLOAT_TO_FIXED(camera->transform.rotation.y)),
@@ -134,11 +136,18 @@ void CalculateProjection(Camera *camera, Projection* obj)
 
     for (size_t i = 0; i < obj->mesh->verticesCount; i++)
     {
+        /* Accès direct à la position du sommet, en évitant de répéter les conversions */
+        const fVector3 vertex_pos = {
+            INT_TO_FIXED(obj->mesh->vertices[i].position.x),
+            INT_TO_FIXED(obj->mesh->vertices[i].position.y),
+            INT_TO_FIXED(obj->mesh->vertices[i].position.z)
+        };
+
         /* Application de l'échelle */
         fVector3 m = {
-            fmul(INT_TO_FIXED(obj->mesh->vertices[i].position.x), scale.x),
-            fmul(INT_TO_FIXED(obj->mesh->vertices[i].position.y), scale.y),
-            fmul(INT_TO_FIXED(obj->mesh->vertices[i].position.z), scale.z)
+            fmul(vertex_pos.x, scale.x),
+            fmul(vertex_pos.y, scale.y),
+            fmul(vertex_pos.z, scale.z)
         };
 
         // Apply local rotation
@@ -157,15 +166,16 @@ void CalculateProjection(Camera *camera, Projection* obj)
         ApplyRotationZ(&m.x, &m.y, cos_camera.z, sin_camera.z);
 
         /* Projection */
-        fixed_t m_z = (m.z < min_z) ? min_z : m.z;
-        fixed_t f = fdiv(INT_TO_FIXED(300), m_z);
+        const fixed_t m_z = (m.z < min_z) ? min_z : m.z;
+        const fixed_t f = fdiv(INT_TO_FIXED(300), m_z);
 
-        m.x = fmul(m.x, f) + center.x;
-        m.y = fmul(-m.y, f) + center.y;
-
-        obj->mesh->vertices[i].projected = m;
+        /* Calcul final de la position projetée */
+        obj->mesh->vertices[i].projected.x = fmul(m.x, f) + half_screen_width;
+        obj->mesh->vertices[i].projected.y = fmul(-m.y, f) + half_screen_height;
+        obj->mesh->vertices[i].projected.z = m.z;
     }
 }
+
 
 
 
@@ -182,8 +192,7 @@ fixed_t slope(fVector2 p1, fVector2 p2)
     return fdiv(p2.y - p1.y, p2.x - p1.x);
 }
 
-
-void DrawFilledQuad(fVector2 points[4], int color)
+void DrawFilledQuadColor(fVector2 points[4], int color)
 {
     fVector2 top_right = points[0];
     fVector2 top_left = points[1];
@@ -198,13 +207,13 @@ void DrawFilledQuad(fVector2 points[4], int color)
         top_right = points[1];
     }
 
-    fixed_t slope_top = slope(top_left, top_right);
-    fixed_t slope_left = slope(top_left, bottom_left);
-    fixed_t slope_right = slope(top_right, bottom_right);
-    fixed_t slope_bottom = slope(bottom_left, bottom_right);
+    const fixed_t slope_top = slope(top_left, top_right);
+    const fixed_t slope_left = slope(top_left, bottom_left);
+    const fixed_t slope_right = slope(top_right, bottom_right);
+    const fixed_t slope_bottom = slope(bottom_left, bottom_right);
 
-    int y_start = max(min(TO_INT(top_left.y), TO_INT(top_right.y)), 0);
-    int y_end = min(max(TO_INT(bottom_left.y), TO_INT(bottom_right.y)), SCREEN_HEIGHT - 1);
+    const int y_start = max(min(TO_INT(top_left.y), TO_INT(top_right.y)), 0);
+    const int y_end = min(max(TO_INT(bottom_left.y), TO_INT(bottom_right.y)), SCREEN_HEIGHT - 1);
 
     fixed_t x_start, x_end;
     for (int y = y_start; y <= y_end; y++)
@@ -253,11 +262,7 @@ void DrawFilledQuad(fVector2 points[4], int color)
 
         // Swap if necessary
         if (x_start > x_end)
-        {
-            fixed_t temp = x_start;
-            x_start = x_end;
-            x_end = temp;
-        }
+            swap(&x_start, &x_end);
 
         // Draw the line using integer values
         int x_start_int = TO_INT(x_start);
@@ -266,23 +271,125 @@ void DrawFilledQuad(fVector2 points[4], int color)
             continue;
         x_start_int = max(min(x_start_int, SCREEN_WIDTH - 1), 0);
         x_end_int = max(min(x_end_int, SCREEN_WIDTH - 1), 0);
-
-        int dx = (x_end_int - x_start_int);
-        int dy = (y_end - y_start);
-        (void)dx;(void)dy;(void)color;
         for (int x = x_start_int; x < x_end_int; x++)
         {
-            fixed_t u = 0;
-            fixed_t v = 0;
+            DrawPixel(x, y, color);
+        }
+    }
+}
 
-            if (dx != 0)
-                u = ((x - x_start_int) * FIXED_SCALE) / dx;
-            if (dy != 0)
-                v = ((y - y_start) * FIXED_SCALE) / dy;
 
-            DrawPixel(x, y, get_uv_map((u*40*4 >> FIXED_SHIFT) % 40, (v*40*4 >> FIXED_SHIFT) % 40));
-            
-            //DrawPixel(x, y, color);
+void DrawFilledQuad(fVector2 points[4], int color)
+{
+    fVector2 top_right = points[0];
+    fVector2 top_left = points[1];
+    fVector2 bottom_left = points[2];
+    fVector2 bottom_right = points[3];
+
+    // Swap points to maintain consistent order
+    if (top_left.y > bottom_left.y)
+    {
+        top_left = points[2];
+        bottom_left = points[3];
+        bottom_right = points[0];
+        top_right = points[1];
+    }
+
+    const fixed_t slope_top = slope(top_left, top_right);
+    const fixed_t slope_left = slope(top_left, bottom_left);
+    const fixed_t slope_right = slope(top_right, bottom_right);
+    const fixed_t slope_bottom = slope(bottom_left, bottom_right);
+
+    const int y_start = max(min(TO_INT(top_left.y), TO_INT(top_right.y)), 0);
+    const int y_end = min(max(TO_INT(bottom_left.y), TO_INT(bottom_right.y)), SCREEN_HEIGHT - 1);
+
+    // Pré-calcul des coordonnées UV aux coins
+    fixed_t u0 = 0, v0 = 0; // top_left
+    fixed_t u1 = FIXED_SCALE, v1 = 0; // top_right
+    fixed_t u2 = 0, v2 = FIXED_SCALE; // bottom_left
+    fixed_t u3 = FIXED_SCALE, v3 = FIXED_SCALE; // bottom_right
+
+    fixed_t x_start, x_end;
+    for (int y = y_start; y <= y_end; y++)
+    {
+        fixed_t fy = INT_TO_FIXED(y);
+
+        // Calculate x_start
+        if (fy < top_left.y)
+        {
+            x_start = top_left.x;
+            if (slope_top)
+                x_start += fdiv(fy - top_left.y, slope_top);
+        }
+        else if (fy <= bottom_left.y)
+        {
+            x_start = top_left.x;
+            if (slope_left)
+                x_start += fdiv(fy - top_left.y, slope_left);
+        }
+        else
+        {
+            x_start = bottom_left.x;
+            if (slope_bottom)
+                x_start += fdiv(fy - bottom_left.y, slope_bottom);
+        }
+
+        // Calculate x_end
+        if (fy < top_right.y)
+        {
+            x_end = top_right.x;
+            if (slope_top)
+                x_end += fdiv(fy - top_right.y, slope_top);
+        }
+        else if (fy <= bottom_right.y)
+        {
+            x_end = top_right.x;
+            if (slope_right)
+                x_end += fdiv(fy - top_right.y, slope_right);
+        }
+        else
+        {
+            x_end = bottom_right.x;
+            if (slope_bottom)
+                x_end += fdiv(fy - bottom_right.y, slope_bottom);
+        }
+
+        // Swap if necessary
+        if (x_start > x_end)
+            swap(&x_start, &x_end);
+
+        int x_start_int = TO_INT(x_start);
+        int x_end_int = TO_INT(x_end);
+        if (y < 0 || y >= SCREEN_HEIGHT)
+            continue;
+        x_start_int = max(min(x_start_int, SCREEN_WIDTH - 1), 0);
+        x_end_int = max(min(x_end_int, SCREEN_WIDTH - 1), 0);
+
+        for (int x = x_start_int; x < x_end_int; x++)
+        {
+            // Interpolation des coordonnées UV en utilisant la méthode de barycentrique
+            fixed_t alpha = fdiv(x - x_start_int, x_end_int - x_start_int);
+            fixed_t beta = fdiv(y - y_start, y_end - y_start);
+
+            if (x_end_int == x_start_int) alpha = 0;
+            if (y_end == y_start) beta = 0;
+
+            // Interpolation linéaire des UVs
+            fixed_t u = fmul(u0, (1 - alpha) * (1 - beta)) +
+                        fmul(u1, alpha * (1 - beta)) +
+                        fmul(u2, (1 - alpha) * beta) +
+                        fmul(u3, alpha * beta);
+
+            fixed_t v = fmul(v0, (1 - alpha) * (1 - beta)) +
+                        fmul(v1, alpha * (1 - beta)) +
+                        fmul(v2, (1 - alpha) * beta) +
+                        fmul(v3, alpha * beta);
+
+            // Échantillonnage de la couleur de la texture en utilisant les coordonnées UV calculées
+            int tex_color = get_uv_map((u*40 >> FIXED_SHIFT) % 40, (v*40 >> FIXED_SHIFT) % 40);
+
+            // Dessin du pixel avec la couleur échantillonnée
+            DrawPixel(x, y, tex_color);
         }
     }
 }

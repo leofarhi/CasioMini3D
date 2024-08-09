@@ -99,4 +99,11 @@ static inline fixed_t fease(fixed_t x)
     }
 }
 
+static inline void swap(fixed_t *x, fixed_t *y)
+{
+    fixed_t temp = *x;
+    *x = *y;
+    *y = temp;
+}
+
 #endif
