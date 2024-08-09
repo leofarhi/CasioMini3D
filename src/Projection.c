@@ -279,7 +279,7 @@ void DrawFilledQuadColor(fVector2 points[4], int color)
 }
 
 
-void DrawFilledQuad(fVector2 points[4], int color)
+void DrawFilledQuad2(fVector2 points[4], int color)
 {
     fVector2 top_right = points[0];
     fVector2 top_left = points[1];
@@ -391,5 +391,116 @@ void DrawFilledQuad(fVector2 points[4], int color)
             // Dessin du pixel avec la couleur échantillonnée
             DrawPixel(x, y, tex_color);
         }
+    }
+}
+
+void DrawFilledQuad(fVector2 points[4], int color)
+{
+    fVector2 top_right = points[0];
+    fVector2 top_left = points[1];
+    fVector2 bottom_left = points[2];
+    fVector2 bottom_right = points[3];
+
+    if (top_left.y > bottom_left.y)
+    {
+        top_left = points[2];
+        bottom_left = points[3];
+        bottom_right = points[0];
+        top_right = points[1];
+    }
+
+    const fixed_t slope_top = slope(top_left, top_right);
+    const fixed_t slope_left = slope(top_left, bottom_left);
+    const fixed_t slope_right = slope(top_right, bottom_right);
+    const fixed_t slope_bottom = slope(bottom_left, bottom_right);
+
+    //const int y_start = max(min(TO_INT(top_left.y), TO_INT(top_right.y)), 0);
+    //const int y_end = min(max(TO_INT(bottom_left.y), TO_INT(bottom_right.y)), SCREEN_HEIGHT - 1);
+    int y_start = min(TO_INT(top_left.y), TO_INT(top_right.y));
+    int y_end = max(TO_INT(bottom_left.y), TO_INT(bottom_right.y));
+    int y_start_org = y_start;
+    int y_end_org = y_end;
+    y_start = max(y_start, 0);
+    y_end = min(y_end, SCREEN_HEIGHT - 1);
+
+    // Pré-calcul des termes constants
+    const fixed_t size = INT_TO_FIXED(40);
+
+    fixed_t u, v;
+    fixed_t du, dv;
+    if (y_end_org != y_start_org)
+        dv = fdiv(size, INT_TO_FIXED(y_end_org) - INT_TO_FIXED(y_start_org));
+    else
+        dv = 0;
+    v = (y_start - y_start_org) * dv;
+    for (int y = y_start; y <= y_end; y++)
+    {
+        fixed_t fy = INT_TO_FIXED(y);
+
+        fixed_t x_start, x_end;
+        if (fy < top_left.y)
+        {
+            x_start = top_left.x;
+            if (slope_top)
+                x_start += fdiv(fy - top_left.y, slope_top);
+        }
+        else if (fy <= bottom_left.y)
+        {
+            x_start = top_left.x;
+            if (slope_left)
+                x_start += fdiv(fy - top_left.y, slope_left);
+        }
+        else
+        {
+            x_start = bottom_left.x;
+            if (slope_bottom)
+                x_start += fdiv(fy - bottom_left.y, slope_bottom);
+        }
+
+        if (fy < top_right.y)
+        {
+            x_end = top_right.x;
+            if (slope_top)
+                x_end += fdiv(fy - top_right.y, slope_top);
+        }
+        else if (fy <= bottom_right.y)
+        {
+            x_end = top_right.x;
+            if (slope_right)
+                x_end += fdiv(fy - top_right.y, slope_right);
+        }
+        else
+        {
+            x_end = bottom_right.x;
+            if (slope_bottom)
+                x_end += fdiv(fy - bottom_right.y, slope_bottom);
+        }
+
+        if (x_start > x_end)
+            swap(&x_start, &x_end);
+
+        int x_start_int = TO_INT(x_start);
+        int x_end_int = TO_INT(x_end);
+        if (y < 0 || y >= SCREEN_HEIGHT)
+            continue;
+        const int x_start_int_org = x_start_int;
+        x_start_int = max(min(x_start_int, SCREEN_WIDTH - 1), 0);
+        x_end_int = max(min(x_end_int, SCREEN_WIDTH - 1), 0);
+
+        
+        // Précalculs pour l'interpolation des UV
+        if (x_end != x_start)
+        {
+            du = fdiv(size, x_end - x_start);
+            u = (x_start_int - x_start_int_org) * du;
+            for (int x = x_start_int; x < x_end_int; x++)
+            {
+                int tex_color = get_uv_map((u*4 >> FIXED_SHIFT) % 40, (v*4 >> FIXED_SHIFT) % 40);
+                DrawPixel(x, y, tex_color);
+                u += du;
+            }
+        }
+        v += dv;
+
     }
 }

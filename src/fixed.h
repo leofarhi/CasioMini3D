@@ -9,6 +9,8 @@ typedef int32_t fixed_t;
 /* The precision of the fixed point numbers. */
 #define PRECISION 16
 
+#define FIXED_ONE (1 << PRECISION)
+
 /* Convert an integer to a fixed point number. */
 #define INT_TO_FIXED(num) ((num)<<PRECISION)
 /* Convert a float to a fixed point number. */

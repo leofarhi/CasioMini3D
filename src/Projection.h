@@ -119,5 +119,6 @@ fixed_t fcos_approx(fixed_t i);
 
 void DrawPixel(int x, int y, int color);
 void DrawFilledQuad(fVector2 points[4], int color);
+void DrawFilledQuadColor(fVector2 points[4], int color);
 
 #endif // PROJECTION_H

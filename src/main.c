@@ -9,6 +9,7 @@
 
 RenderQuad quads[512];
 size_t quad_count = 0;
+float rotation = 0;
 
 void AddQuad(fVector3 points[4], int color)
 {
@@ -196,6 +197,9 @@ int main(){
 
         SortQuads();
         DrawQuads();
+
+        rotation += 0.01;
+        rotation = fmod(rotation, M_PI/4);
 
         dupdate();
     }
