@@ -24,15 +24,15 @@
 RenderQuad quads[512];
 size_t quad_count = 0;
 
-void AddQuad(Vector2 points[4], int color, int z)
+void AddQuad(fVector3 points[4], int color)
 {
     if (quad_count >= 512)
         return;
-    //quads[quad_count] = (RenderQuad){(Vector2[4]){points[0], points[1], points[2], points[3]}, z, color};
-    quads[quad_count].points[0] = points[0];
-    quads[quad_count].points[1] = points[1];
-    quads[quad_count].points[2] = points[2];
-    quads[quad_count].points[3] = points[3];
+    int z = (points[0].z + points[1].z + points[2].z + points[3].z) / 4;
+    quads[quad_count].points[0] = (fVector2){points[0].x, points[0].y};
+    quads[quad_count].points[1] = (fVector2){points[1].x, points[1].y};
+    quads[quad_count].points[2] = (fVector2){points[2].x, points[2].y};
+    quads[quad_count].points[3] = (fVector2){points[3].x, points[3].y};
     quads[quad_count].z = z;
     quads[quad_count].color = color;
     quad_count++;
@@ -82,6 +82,8 @@ int DetectInRange(Camera* camera, Vector3 position)
     z = new_z;
 
     /* Projection en coordonnées écran */
+    if (z <= 0)
+        return 0;
     fixed_t f = fdiv(INT_TO_FIXED(300), z);
     x = fmul(x, f);
     y = fmul(y, f);
@@ -112,18 +114,18 @@ void DrawLinesCube(Vertex vertices[8])
     }
 }
 
-void DrawFilledCube(Vector2 render_points[8],int depth[8])
+void DrawFilledCube(fVector3 render_points[8])
 {
-    //AddQuad((Vector2[]){render_points[0], render_points[1], render_points[2], render_points[3]}, C_WHITE, (render_points[0].z + render_points[1].z + render_points[2].z + render_points[3].z) / 4);
-    AddQuad((Vector2[]){render_points[4], render_points[5], render_points[6], render_points[7]}, C_WHITE, (depth[4] + depth[5] + depth[6] + depth[7]) / 4);
+    //AddQuad((fVector3[]){render_points[0], render_points[1], render_points[2], render_points[3]}, C_WHITE);
+    AddQuad((fVector3[]){render_points[4], render_points[5], render_points[6], render_points[7]}, C_WHITE);
     if (render_points[0].y < render_points[4].y)
-        AddQuad((Vector2[]){render_points[0], render_points[1], render_points[5], render_points[4]}, C_BLUE, (depth[0] + depth[1] + depth[5] + depth[4]) / 4);
+        AddQuad((fVector3[]){render_points[0], render_points[1], render_points[5], render_points[4]}, C_BLUE);
     if (render_points[5].x < render_points[1].x)
-        AddQuad((Vector2[]){render_points[5], render_points[1], render_points[2], render_points[6]}, C_GREEN, (depth[5] + depth[1] + depth[2] + depth[6]) / 4);
+        AddQuad((fVector3[]){render_points[5], render_points[1], render_points[2], render_points[6]}, C_GREEN);
     if (render_points[6].y < render_points[2].y)
-        AddQuad((Vector2[]){render_points[3], render_points[2], render_points[6], render_points[7]}, C_BLUE, (depth[3] + depth[2] + depth[6] + depth[7]) / 4);
+        AddQuad((fVector3[]){render_points[3], render_points[2], render_points[6], render_points[7]}, C_BLUE);
     if (render_points[3].x < render_points[7].x)
-        AddQuad((Vector2[]){render_points[0], render_points[4], render_points[7], render_points[3]}, C_GREEN, (depth[0] + depth[4] + depth[7] + depth[3]) / 4);
+        AddQuad((fVector3[]){render_points[0], render_points[4], render_points[7], render_points[3]}, C_GREEN);
 }
 
 void DrawBlock(Camera* camera, Vector3 position)
@@ -145,28 +147,18 @@ void DrawBlock(Camera* camera, Vector3 position)
     Mesh mesh = (Mesh){vertices,8};
     Projection obj = (Projection){&mesh,{position,(Vector3f){0,0,0},(Vector3f){1,1,1}}};
     CalculateProjection(camera, &obj);
-    Vector2 render_points[8] = {
-        {vertices[0].projected.x, vertices[0].projected.y},
-        {vertices[1].projected.x, vertices[1].projected.y},
-        {vertices[2].projected.x, vertices[2].projected.y},
-        {vertices[3].projected.x, vertices[3].projected.y},
-        {vertices[4].projected.x, vertices[4].projected.y},
-        {vertices[5].projected.x, vertices[5].projected.y},
-        {vertices[6].projected.x, vertices[6].projected.y},
-        {vertices[7].projected.x, vertices[7].projected.y},
-    };
-    int depth[8] = {
-        vertices[0].projected.z,
-        vertices[1].projected.z,
-        vertices[2].projected.z,
-        vertices[3].projected.z,
-        vertices[4].projected.z,
-        vertices[5].projected.z,
-        vertices[6].projected.z,
-        vertices[7].projected.z,
+    fVector3 render_points[8] = {
+        vertices[0].projected,
+        vertices[1].projected,
+        vertices[2].projected,
+        vertices[3].projected,
+        vertices[4].projected,
+        vertices[5].projected,
+        vertices[6].projected,
+        vertices[7].projected
     };
     //DrawLinesCube(vertices);
-    DrawFilledCube(render_points, depth);
+    DrawFilledCube(render_points);
     
     
 }
@@ -174,6 +166,8 @@ void DrawBlock(Camera* camera, Vector3 position)
 
 
 int main(){
+    srand(time(NULL));
+    clock_set_speed(CLOCK_SPEED_F5);
     init_uv_map();
     Camera camera = (Camera){(Vector3){0,0,-500},(Vector3f){0,0,0},(Vector3f){1,1,1}};
     while (!keydown(KEY_MENU))

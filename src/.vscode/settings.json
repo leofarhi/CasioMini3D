@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "projection.h": "c",
+        "resources.h": "c"
+    }
+}

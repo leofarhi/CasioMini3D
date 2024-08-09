@@ -9,10 +9,13 @@
 #include <gint/keyboard.h>
 #include <gint/timer.h>
 #include <gint/clock.h>
+#include <gint/dma.h>
 
 #include <math.h>
 #include <stddef.h>
 #include <stdio.h>
+#include <string.h>
+#include <time.h>
 
 #define min(a,b) ((a) < (b) ? (a) : (b))
 #define max(a,b) ((a) > (b) ? (a) : (b))
@@ -57,6 +60,12 @@ typedef struct fVector3
     fixed_t z;
 } fVector3;
 
+typedef struct fVector2
+{
+    fixed_t x;
+    fixed_t y;
+} fVector2;
+
 typedef struct Transform
 {
     Vector3 position;
@@ -67,12 +76,12 @@ typedef struct Transform
 typedef struct Vertex
 {
     Vector3 position;
-    Vector3 projected;
+    fVector3 projected;
 } Vertex;
 
 typedef struct RenderQuad
 {
-    Vector2 points[4];
+    fVector2 points[4];
     int z;
     int color;
 } RenderQuad;
@@ -109,6 +118,6 @@ fixed_t fcos_approx(fixed_t i);
 
 
 void DrawPixel(int x, int y, int color);
-void DrawFilledQuad(Vector2 points[4], int color);
+void DrawFilledQuad(fVector2 points[4], int color);
 
 #endif // PROJECTION_H
