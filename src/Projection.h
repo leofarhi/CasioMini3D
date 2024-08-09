@@ -103,6 +103,10 @@ float sin_approx(float i);
 
 float cos_approx(float i);
 
+fixed_t fsin_approx(fixed_t i);
+
+fixed_t fcos_approx(fixed_t i);
+
 
 void DrawPixel(int x, int y, int color);
 void DrawFilledQuad(Vector2 points[4], int color);

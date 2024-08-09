@@ -64,32 +64,37 @@ void DrawQuads()
 }
 
 
-
-
-
-
 int DetectInRange(Camera* camera, Vector3 position)
 {
-    int x = position.x - camera->transform.position.x;
-    int y = position.y - camera->transform.position.y;
-    int z = position.z - camera->transform.position.z;
+    /* Conversion des positions en fixed-point */
+    fixed_t x = INT_TO_FIXED(position.x - camera->transform.position.x);
+    fixed_t y = INT_TO_FIXED(position.y - camera->transform.position.y);
+    fixed_t z = INT_TO_FIXED(position.z - camera->transform.position.z);
 
-    const float cos_theta = cos(camera->transform.rotation.x);
-    const float sin_theta = sin(camera->transform.rotation.x);
-    const float new_y = y * cos_theta - z * sin_theta;
-    const float new_z = y * sin_theta + z * cos_theta;
+    /* Calcul du cosinus et sinus de l'angle de rotation de la caméra en fixed-point */
+    fixed_t cos_theta = fcos_approx(FLOAT_TO_FIXED(camera->transform.rotation.x));
+    fixed_t sin_theta = fsin_approx(FLOAT_TO_FIXED(camera->transform.rotation.x));
+
+    /* Application de la rotation autour de l'axe X */
+    fixed_t new_y = fmul(y, cos_theta) - fmul(z, sin_theta);
+    fixed_t new_z = fmul(y, sin_theta) + fmul(z, cos_theta);
     y = new_y;
     z = new_z;
 
-    float f = 300 / (float)z;
-    x = (x * f);
-    y = (y * f);
-    if (x > (SCREEN_WIDTH / 2) + 80 || x < -(SCREEN_WIDTH / 2) - 80)
+    /* Projection en coordonnées écran */
+    fixed_t f = fdiv(INT_TO_FIXED(300), z);
+    x = fmul(x, f);
+    y = fmul(y, f);
+
+    /* Vérification si l'objet est hors de l'écran */
+    if (TO_INT(x) > (SCREEN_WIDTH / 2) + 80 || TO_INT(x) < -(SCREEN_WIDTH / 2) - 80)
         return 0;
-    if (y > (SCREEN_HEIGHT / 2) + 80 || y < -(SCREEN_HEIGHT / 2) - 80)
+    if (TO_INT(y) > (SCREEN_HEIGHT / 2) + 80 || TO_INT(y) < -(SCREEN_HEIGHT / 2) - 80)
         return 0;
+
     return 1;
 }
+
 
 void DrawLinesCube(Vertex vertices[8])
 {
