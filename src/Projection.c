@@ -169,37 +169,48 @@ inline static void ApplyRotationZ(fixed_t *x, fixed_t *y, fixed_t cos_theta, fix
 void CalculateProjection(Camera *camera, Projection* obj)
 {
     const Vector2 center = {INT_TO_FIXED(SCREEN_WIDTH / 2), INT_TO_FIXED(SCREEN_HEIGHT / 2)};
-    const Transform *_transform = &obj->transform;
-    const Transform* cameraTransform = &camera->transform;
 
-    /* Pré-calcul des cos et sin pour la rotation de la caméra */
-    const fVector3 cos_camera = {
-        fcos_approx(FLOAT_TO_FIXED(cameraTransform->rotation.x)),
-        fcos_approx(FLOAT_TO_FIXED(cameraTransform->rotation.y)),
-        fcos_approx(FLOAT_TO_FIXED(cameraTransform->rotation.z))
+    /* Pré-calcul des cos et sin pour la rotation de l'obj */
+    const fVector3 cos_transform = {
+        fcos_approx(FLOAT_TO_FIXED(obj->transform.rotation.x)),
+        fcos_approx(FLOAT_TO_FIXED(obj->transform.rotation.y)),
+        fcos_approx(FLOAT_TO_FIXED(obj->transform.rotation.z))
     };
-    const fVector3 sin_camera = {
-        fsin_approx(FLOAT_TO_FIXED(cameraTransform->rotation.x)),
-        fsin_approx(FLOAT_TO_FIXED(cameraTransform->rotation.y)),
-        fsin_approx(FLOAT_TO_FIXED(cameraTransform->rotation.z))
+
+    const fVector3 sin_transform = {
+        fsin_approx(FLOAT_TO_FIXED(obj->transform.rotation.x)),
+        fsin_approx(FLOAT_TO_FIXED(obj->transform.rotation.y)),
+        fsin_approx(FLOAT_TO_FIXED(obj->transform.rotation.z))
     };
 
     const fVector3 scale = {
-        FLOAT_TO_FIXED(_transform->scale.x),
-        FLOAT_TO_FIXED(_transform->scale.y),
-        FLOAT_TO_FIXED(_transform->scale.z)
+        FLOAT_TO_FIXED(obj->transform.scale.x),
+        FLOAT_TO_FIXED(obj->transform.scale.y),
+        FLOAT_TO_FIXED(obj->transform.scale.z)
     };
 
     const fVector3 position = {
-        INT_TO_FIXED(_transform->position.x),
-        INT_TO_FIXED(_transform->position.y),
-        INT_TO_FIXED(_transform->position.z)
+        INT_TO_FIXED(obj->transform.position.x),
+        INT_TO_FIXED(obj->transform.position.y),
+        INT_TO_FIXED(obj->transform.position.z)
+    };
+
+    /* Pré-calcul des cos et sin pour la rotation de la caméra */
+    const fVector3 cos_camera = {
+        fcos_approx(FLOAT_TO_FIXED(camera->transform.rotation.x)),
+        fcos_approx(FLOAT_TO_FIXED(camera->transform.rotation.y)),
+        fcos_approx(FLOAT_TO_FIXED(camera->transform.rotation.z))
+    };
+    const fVector3 sin_camera = {
+        fsin_approx(FLOAT_TO_FIXED(camera->transform.rotation.x)),
+        fsin_approx(FLOAT_TO_FIXED(camera->transform.rotation.y)),
+        fsin_approx(FLOAT_TO_FIXED(camera->transform.rotation.z))
     };
 
     const fVector3 camera_position = {
-        INT_TO_FIXED(cameraTransform->position.x),
-        INT_TO_FIXED(cameraTransform->position.y),
-        INT_TO_FIXED(cameraTransform->position.z)
+        INT_TO_FIXED(camera->transform.position.x),
+        INT_TO_FIXED(camera->transform.position.y),
+        INT_TO_FIXED(camera->transform.position.z)
     };
 
     const fixed_t min_z = INT_TO_FIXED(1);
@@ -212,6 +223,11 @@ void CalculateProjection(Camera *camera, Projection* obj)
             fmul(INT_TO_FIXED(obj->mesh->vertices[i].position.y), scale.y),
             fmul(INT_TO_FIXED(obj->mesh->vertices[i].position.z), scale.z)
         };
+
+        // Apply local rotation
+        ApplyRotationX(&m.y, &m.z, cos_transform.x, sin_transform.x);
+        ApplyRotationY(&m.x, &m.z, cos_transform.y, sin_transform.y);
+        ApplyRotationZ(&m.x, &m.y, cos_transform.z, sin_transform.z);
 
         /* Application de la translation (incluant l'inverse de la translation de la caméra) */
         m.x += position.x - camera_position.x;

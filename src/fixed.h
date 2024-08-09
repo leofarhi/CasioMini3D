@@ -4,7 +4,7 @@
 #include <stdlib.h>
 
 /* The fixed point type (to make the code easier to read). */
-typedef int64_t fixed_t;
+typedef int32_t fixed_t;
 
 /* The precision of the fixed point numbers. */
 #define PRECISION 16
