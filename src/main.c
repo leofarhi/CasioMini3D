@@ -132,7 +132,7 @@ void DrawBlock(Camera* camera, Vector3 position)
         {{-size,-size,-size}, {0, 0, 0}},
     };
     Mesh mesh = (Mesh){vertices,8};
-    Projection obj = (Projection){&mesh,{position,(Vector3f){0,0,rotation},(Vector3f){1,1,1}}};
+    Projection obj = (Projection){&mesh,{position,(Vector3f){0,0,0},(Vector3f){1,1,1}}};
     CalculateProjection(camera, &obj);
     fVector3 render_points[8] = {
         vertices[0].projected,

@@ -581,7 +581,7 @@ void DrawFilledQuad(fVector2 points[4], int color)
         // Précalculs pour l'interpolation des UV
         if (x_end != x_start && nx_end != nx_start)
         {
-            for (int x = x_start_int; x < x_end_int; x++)
+            /*for (int x = x_start_int; x < x_end_int; x++)
             {
                 const fVector2 vec = {INT_TO_FIXED(x), fy};
                 
@@ -589,9 +589,9 @@ void DrawFilledQuad(fVector2 points[4], int color)
                 multiplyMatrixVector(matrix, vec, &uv);
                 int tex_color = get_uv_map((uv.x >> PRECISION) % 40, (uv.y >> PRECISION) % 40);
                 DrawPixel(x, y, tex_color);
-            }
+            }*/
             //Use slope to calculate the UV
-            /*fVector2 uv_start, uv_end;
+            fVector2 uv_start, uv_end;
             multiplyMatrixVector(matrix, (fVector2){nx_start, fy}, &uv_start);
             multiplyMatrixVector(matrix, (fVector2){nx_end, fy}, &uv_end);
             fixed_t du = fdiv(uv_end.x - uv_start.x, nx_end - nx_start);
@@ -604,7 +604,7 @@ void DrawFilledQuad(fVector2 points[4], int color)
                 DrawPixel(x, y, tex_color);
                 u += du;
                 v += dv;
-            }*/
+            }
         }
 
     }

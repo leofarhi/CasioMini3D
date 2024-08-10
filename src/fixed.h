@@ -24,6 +24,8 @@ typedef intmax_t fixed_t;
 
 #define DIV(a, b) ((a<<PRECISION)/b)
 
+
+
 static inline fixed_t fixed_abs(fixed_t x)
 {
     return x < 0 ? -x : x;
@@ -111,6 +113,11 @@ static inline void swap(fixed_t *x, fixed_t *y)
     fixed_t temp = *x;
     *x = *y;
     *y = temp;
+}
+
+static inline fixed_t fixed_lerp(fixed_t a, fixed_t b, fixed_t t)
+{
+    return a + fmul(t, b - a);
 }
 
 #endif
