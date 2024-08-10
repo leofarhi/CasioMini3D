@@ -4,7 +4,7 @@
 #include <stdlib.h>
 
 /* The fixed point type (to make the code easier to read). */
-typedef int32_t fixed_t;
+typedef intmax_t fixed_t;
 
 /* The precision of the fixed point numbers. */
 #define PRECISION 16
@@ -24,30 +24,35 @@ typedef int32_t fixed_t;
 
 #define DIV(a, b) ((a<<PRECISION)/b)
 
+static inline fixed_t fixed_abs(fixed_t x)
+{
+    return x < 0 ? -x : x;
+}
+
 static inline fixed_t fmul(fixed_t left, fixed_t right)
 {
     /* Generally optimized by the compiler to use dmuls.l and xtrct */
-    int64_t p = (int64_t)left * (int64_t)right;
-    return (int32_t)(p >> PRECISION);
+    intmax_t p = left * right;
+    return (p >> PRECISION);
 }
 
 static inline fixed_t fdiv(fixed_t left, fixed_t right)
 {
     /* Pretty slow */
-    int64_t d = (int64_t)left << PRECISION;
+    intmax_t d = left << PRECISION;
     return d / right;
 }
 
-#define fix(x) ((int)((x) * 65536))
+#define fix(x) ((int)((x) * FIXED_ONE))
 
 static inline fixed_t fixdouble(double constant)
 {
-    return (fixed_t)(constant * 65536);
+    return (fixed_t)(constant * FIXED_ONE);
 }
 
 static inline fixed_t fixfloat(float constant)
 {
-    return (fixed_t)(constant * 65536);
+    return (fixed_t)(constant * FIXED_ONE);
 }
 
 static inline fixed_t fdec(fixed_t f)
@@ -72,17 +77,17 @@ static inline int fround(fixed_t f)
 
 static inline float f2float(fixed_t f)
 {
-    return (float)f / 65536;
+    return (float)f / FIXED_ONE;
 }
 
 static inline double f2double(fixed_t f)
 {
-    return (double)f / 65536;
+    return (double)f / FIXED_ONE;
 }
 
 static inline double f2int(fixed_t f)
 {
-    return (int)f / 65536;
+    return (int)f / FIXED_ONE;
 }
 
 static inline fixed_t feasein(fixed_t x)

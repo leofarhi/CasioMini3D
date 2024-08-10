@@ -390,6 +390,96 @@ void DrawFilledQuad2(fVector2 points[4], int color)
     }
 }
 
+void multiplyMatrixVector(fixed_t matrix[3][3], fVector2 vec, fVector2* result) {
+    const fixed_t w = fmul(matrix[2][0] , vec.x) + fmul(matrix[2][1] , vec.y) + matrix[2][2];
+    if (w == 0) {
+        result->x = 0;
+        result->y = 0;
+        return;
+    }
+    result->x = fdiv((fmul(matrix[0][0] , vec.x) + fmul(matrix[0][1] , vec.y) + matrix[0][2]) , w);
+    result->y = fdiv((fmul(matrix[1][0] , vec.x) + fmul(matrix[1][1] , vec.y) + matrix[1][2]) , w);
+}
+
+void computePerspectiveMatrix(fVector2 src[4], fVector2 dest[4], fixed_t matrix[3][3]) {
+    fixed_t A[8][8] = {0}; // Matrice pour résoudre les équations
+    fixed_t B[8] = {0};    // Matrice des résultats
+
+    for (int i = 0; i < 4; ++i) {
+        fixed_t x = src[i].x;
+        fixed_t y = src[i].y;
+        fixed_t x_ = dest[i].x;
+        fixed_t y_ = dest[i].y;
+
+        A[2*i][0] = x;
+        A[2*i][1] = y;
+        A[2*i][2] = FIXED_ONE;
+        A[2*i][6] = - fmul( x , x_);
+        A[2*i][7] = - fmul( y , x_);
+        A[2*i+1][3] = x;
+        A[2*i+1][4] = y;
+        A[2*i+1][5] = FIXED_ONE;
+        A[2*i+1][6] = -fmul(x , y_);
+        A[2*i+1][7] = -fmul(y , y_);
+
+        B[2*i] = x_;
+        B[2*i+1] = y_;
+    }
+
+    // Résoudre le système d'équations A * H = B
+    for (int i = 0; i < 8; ++i) {
+        // Trouver le pivot non nul
+        int max_row = i;
+        for (int k = i + 1; k < 8; ++k) {
+            if (fixed_abs(A[k][i]) > fixed_abs(A[max_row][i])) {
+                max_row = k;
+            }
+        }
+
+        // Échanger les lignes si nécessaire
+        if (i != max_row) {
+            for (int j = 0; j < 8; ++j) {
+                fixed_t temp = A[i][j];
+                A[i][j] = A[max_row][j];
+                A[max_row][j] = temp;
+            }
+            fixed_t temp = B[i];
+            B[i] = B[max_row];
+            B[max_row] = temp;
+        }
+
+        // Normaliser la ligne du pivot
+        fixed_t pivot = A[i][i];
+        if (pivot == 0)
+			continue;
+        for (int j = i; j < 8; ++j) {
+            A[i][j] = fdiv(A[i][j], pivot);
+        }
+        B[i] = fdiv(B[i], pivot);
+
+        // Élimination des autres lignes
+        for (int k = 0; k < 8; ++k) {
+            if (k != i) {
+                fixed_t factor = A[k][i];
+                for (int j = i; j < 8; ++j) {
+                    A[k][j] -= fmul(factor, A[i][j]);
+                }
+                B[k] -= fmul(factor, B[i]);
+            }
+        }
+    }
+
+    // Remplir la matrice de perspective
+    matrix[0][0] = B[0];
+    matrix[0][1] = B[1];
+    matrix[0][2] = B[2];
+    matrix[1][0] = B[3];
+    matrix[1][1] = B[4];
+    matrix[1][2] = B[5];
+    matrix[2][0] = B[6];
+    matrix[2][1] = B[7];
+    matrix[2][2] = FIXED_ONE;
+}
 
 void DrawFilledQuad(fVector2 points[4], int color)
 {
@@ -415,6 +505,12 @@ void DrawFilledQuad(fVector2 points[4], int color)
     const int y_end = min(max(TO_INT(bottom_left.y), TO_INT(bottom_right.y)), SCREEN_HEIGHT - 1);
     // Pré-calcul des termes constants
     const fixed_t size = INT_TO_FIXED(40);
+
+    fixed_t matrix[3][3];
+    fVector2 src[4] = {{0, 0}, {size, 0}, {size, size}, {0, size}};
+    fVector2 dest[4] = {top_left, top_right, bottom_right, bottom_left};
+    computePerspectiveMatrix(dest, src, matrix);
+
 
     for (int y = y_start; y <= y_end; y++)
     {
@@ -469,27 +565,16 @@ void DrawFilledQuad(fVector2 points[4], int color)
         x_start_int = max(min(x_start_int, SCREEN_WIDTH - 1), 0);
         x_end_int = max(min(x_end_int, SCREEN_WIDTH - 1), 0);
 
-        
         // Précalculs pour l'interpolation des UV
         if (x_end != x_start)
         {
-            fixed_t x_1 = 0, x_2 = 0, y_1 = 0, y_2 = 0;
-            if (top_right.y != bottom_right.y)
-                y_1 = fdiv((fy - top_right.y), (bottom_right.y - top_right.y));
-            if (bottom_left.y != top_left.y)
-                y_2 = fdiv((fy - top_left.y), (bottom_left.y - top_left.y));
             for (int x = x_start_int; x < x_end_int; x++)
             {
-                fixed_t fx = INT_TO_FIXED(x);
+                const fVector2 vec = {INT_TO_FIXED(x), fy};
                 
-                if (top_left.x != top_right.x)
-                    x_1 = fdiv((fx - top_right.x), (top_left.x - top_right.x));
-                if (bottom_left.x != bottom_right.x)
-                    x_2 = fdiv((fx - bottom_right.x), (bottom_left.x - bottom_right.x));
-                // Interpolation des UV
-                fixed_t u = x_1 + fmul((x_2 - x_1) , y_1);
-                fixed_t v = y_1 + fmul((y_2 - y_1) , x_1);
-                int tex_color = get_uv_map((u*40*4 >> FIXED_SHIFT) % 40, (v*40*4 >> FIXED_SHIFT) % 40);
+                fVector2 uv;
+                multiplyMatrixVector(matrix, vec, &uv);
+                int tex_color = get_uv_map((uv.x >> FIXED_SHIFT)*4 % 40, (uv.y >> FIXED_SHIFT)*4 % 40);
                 DrawPixel(x, y, tex_color);
             }
         }
