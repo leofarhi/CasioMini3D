@@ -23,8 +23,6 @@
 
 #define rgb(r, g, b) ((r & 0xf8) << 8) | ((g & 0xfc) << 3) | ((b & 0xf8) >> 3)
 
-#define FIXED_SHIFT 16
-#define FIXED_SCALE (1 << FIXED_SHIFT)
 
 
 #define M_PI 3.14159265358979323846

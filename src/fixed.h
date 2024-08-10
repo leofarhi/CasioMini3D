@@ -7,16 +7,16 @@
 typedef intmax_t fixed_t;
 
 /* The precision of the fixed point numbers. */
-#define PRECISION 16
+#define PRECISION 18
 
 #define FIXED_ONE (1 << PRECISION)
 
 /* Convert an integer to a fixed point number. */
-#define INT_TO_FIXED(num) ((num)<<PRECISION)
+#define INT_TO_FIXED(num) (fixed_t)((num)<<PRECISION)
 /* Convert a float to a fixed point number. */
 #define FLOAT_TO_FIXED(num) (fixed_t)((num)*(1<<PRECISION))
 /* Convert a fixed point number to an integer. */
-#define TO_INT(num) ((num)>>PRECISION)
+#define TO_INT(num) (int)((num)>>PRECISION)
 /* Convert a fixed point number to a float. */
 #define TO_FLOAT(num) ((float)(num)/(1<<PRECISION))
 /* Multiply two fixed point numbers together. */

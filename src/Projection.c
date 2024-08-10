@@ -380,7 +380,7 @@ void DrawFilledQuad2(fVector2 points[4], int color)
             u = (x_start_int - x_start_int_org) * du;
             for (int x = x_start_int; x < x_end_int; x++)
             {
-                int tex_color = get_uv_map((u*4 >> FIXED_SHIFT) % 40, (v*4 >> FIXED_SHIFT) % 40);
+                int tex_color = get_uv_map((u*4 >> PRECISION) % 40, (v*4 >> PRECISION) % 40);
                 DrawPixel(x, y, tex_color);
                 u += du;
             }
@@ -390,7 +390,7 @@ void DrawFilledQuad2(fVector2 points[4], int color)
     }
 }
 
-void multiplyMatrixVector(fixed_t matrix[3][3], fVector2 vec, fVector2* result) {
+inline static void multiplyMatrixVector(fixed_t matrix[3][3], fVector2 vec, fVector2* result) {
     const fixed_t w = fmul(matrix[2][0] , vec.x) + fmul(matrix[2][1] , vec.y) + matrix[2][2];
     if (w == 0) {
         result->x = 0;
@@ -401,32 +401,20 @@ void multiplyMatrixVector(fixed_t matrix[3][3], fVector2 vec, fVector2* result) 
     result->y = fdiv((fmul(matrix[1][0] , vec.x) + fmul(matrix[1][1] , vec.y) + matrix[1][2]) , w);
 }
 
-void computePerspectiveMatrix(fVector2 src[4], fVector2 dest[4], fixed_t matrix[3][3]) {
-    fixed_t A[8][8] = {0}; // Matrice pour résoudre les équations
-    fixed_t B[8] = {0};    // Matrice des résultats
-
-    for (int i = 0; i < 4; ++i) {
-        fixed_t x = src[i].x;
-        fixed_t y = src[i].y;
-        fixed_t x_ = dest[i].x;
-        fixed_t y_ = dest[i].y;
-
-        A[2*i][0] = x;
-        A[2*i][1] = y;
-        A[2*i][2] = FIXED_ONE;
-        A[2*i][6] = - fmul( x , x_);
-        A[2*i][7] = - fmul( y , x_);
-        A[2*i+1][3] = x;
-        A[2*i+1][4] = y;
-        A[2*i+1][5] = FIXED_ONE;
-        A[2*i+1][6] = -fmul(x , y_);
-        A[2*i+1][7] = -fmul(y , y_);
-
-        B[2*i] = x_;
-        B[2*i+1] = y_;
+// Fonction utilitaire pour échanger les lignes dans A et B
+void swap_rows(fixed_t A[8][8], fixed_t B[8], int row1, int row2) {
+    if (row1 == row2) return; // Éviter les échanges inutiles
+    for (int j = 0; j < 8; ++j) {
+        fixed_t temp = A[row1][j];
+        A[row1][j] = A[row2][j];
+        A[row2][j] = temp;
     }
+    fixed_t temp = B[row1];
+    B[row1] = B[row2];
+    B[row2] = temp;
+}
 
-    // Résoudre le système d'équations A * H = B
+void gauss_jordan(fixed_t A[8][8], fixed_t B[8]) {
     for (int i = 0; i < 8; ++i) {
         // Trouver le pivot non nul
         int max_row = i;
@@ -438,36 +426,59 @@ void computePerspectiveMatrix(fVector2 src[4], fVector2 dest[4], fixed_t matrix[
 
         // Échanger les lignes si nécessaire
         if (i != max_row) {
-            for (int j = 0; j < 8; ++j) {
-                fixed_t temp = A[i][j];
-                A[i][j] = A[max_row][j];
-                A[max_row][j] = temp;
-            }
-            fixed_t temp = B[i];
-            B[i] = B[max_row];
-            B[max_row] = temp;
+            swap_rows(A, B, i, max_row);
         }
 
         // Normaliser la ligne du pivot
-        fixed_t pivot = A[i][i];
-        if (pivot == 0)
-			continue;
-        for (int j = i; j < 8; ++j) {
-            A[i][j] = fdiv(A[i][j], pivot);
+        const fixed_t pivot = A[i][i];
+        if (pivot != 0) {
+            // Normaliser la ligne du pivot en une seule passe
+            const fixed_t inv_pivot = fdiv(FIXED_ONE, pivot);
+            for (int j = i; j < 8; ++j) {
+                A[i][j] = fmul(A[i][j], inv_pivot);
+            }
+            B[i] = fmul(B[i], inv_pivot);
         }
-        B[i] = fdiv(B[i], pivot);
+        
 
         // Élimination des autres lignes
         for (int k = 0; k < 8; ++k) {
             if (k != i) {
                 fixed_t factor = A[k][i];
-                for (int j = i; j < 8; ++j) {
-                    A[k][j] -= fmul(factor, A[i][j]);
+                if (factor != 0) { // Éviter les opérations inutiles
+                    for (int j = i; j < 8; ++j) {
+                        A[k][j] = A[k][j] - fmul(factor, A[i][j]);
+                    }
+                    B[k] = B[k]- fmul(factor, B[i]);
                 }
-                B[k] -= fmul(factor, B[i]);
             }
         }
     }
+}
+
+
+inline static void computePerspectiveMatrix(fVector2 src[4], fVector2 dest[4], fixed_t matrix[3][3]) {
+    fixed_t A[8][8] = {
+        {src[0].x, src[0].y, FIXED_ONE, 0, 0, 0, -fmul(src[0].x, dest[0].x), -fmul(src[0].y, dest[0].x)},
+        {0, 0, 0, src[0].x, src[0].y, FIXED_ONE, -fmul(src[0].x, dest[0].y), -fmul(src[0].y, dest[0].y)},
+        {src[1].x, src[1].y, FIXED_ONE, 0, 0, 0, -fmul(src[1].x, dest[1].x), -fmul(src[1].y, dest[1].x)},
+        {0, 0, 0, src[1].x, src[1].y, FIXED_ONE, -fmul(src[1].x, dest[1].y), -fmul(src[1].y, dest[1].y)},
+        {src[2].x, src[2].y, FIXED_ONE, 0, 0, 0, -fmul(src[2].x, dest[2].x), -fmul(src[2].y, dest[2].x)},
+        {0, 0, 0, src[2].x, src[2].y, FIXED_ONE, -fmul(src[2].x, dest[2].y), -fmul(src[2].y, dest[2].y)},
+        {src[3].x, src[3].y, FIXED_ONE, 0, 0, 0, -fmul(src[3].x, dest[3].x), -fmul(src[3].y, dest[3].x)},
+        {0, 0, 0, src[3].x, src[3].y, FIXED_ONE, -fmul(src[3].x, dest[3].y), -fmul(src[3].y, dest[3].y)}
+    };
+
+    fixed_t B[8] = {
+        // Les valeurs de B sont les coordonnées x et y de dest
+        dest[0].x, dest[0].y,
+        dest[1].x, dest[1].y,
+        dest[2].x, dest[2].y,
+        dest[3].x, dest[3].y
+    };
+
+    // Appliquer la méthode de Gauss-Jordan pour résoudre le système d'équations
+    gauss_jordan(A, B);
 
     // Remplir la matrice de perspective
     matrix[0][0] = B[0];
@@ -496,6 +507,13 @@ void DrawFilledQuad(fVector2 points[4], int color)
         top_right = points[1];
     }
 
+    const fixed_t size = INT_TO_FIXED(40)*4;
+
+    fixed_t matrix[3][3];
+    fVector2 src[4] = {{0, 0}, {size, 0}, {size, size}, {0, size}};
+    fVector2 dest[4] = {top_left, top_right, bottom_right, bottom_left};
+    computePerspectiveMatrix(dest, src, matrix);
+
     const fixed_t slope_top = slope(top_left, top_right);
     const fixed_t slope_left = slope(top_left, bottom_left);
     const fixed_t slope_right = slope(top_right, bottom_right);
@@ -503,15 +521,8 @@ void DrawFilledQuad(fVector2 points[4], int color)
 
     const int y_start = max(min(TO_INT(top_left.y), TO_INT(top_right.y)), 0);
     const int y_end = min(max(TO_INT(bottom_left.y), TO_INT(bottom_right.y)), SCREEN_HEIGHT - 1);
-    // Pré-calcul des termes constants
-    const fixed_t size = INT_TO_FIXED(40);
 
-    fixed_t matrix[3][3];
-    fVector2 src[4] = {{0, 0}, {size, 0}, {size, size}, {0, size}};
-    fVector2 dest[4] = {top_left, top_right, bottom_right, bottom_left};
-    computePerspectiveMatrix(dest, src, matrix);
-
-
+    
     for (int y = y_start; y <= y_end; y++)
     {
         fixed_t fy = INT_TO_FIXED(y);
@@ -564,18 +575,35 @@ void DrawFilledQuad(fVector2 points[4], int color)
             continue;
         x_start_int = max(min(x_start_int, SCREEN_WIDTH - 1), 0);
         x_end_int = max(min(x_end_int, SCREEN_WIDTH - 1), 0);
+        const fixed_t nx_start = INT_TO_FIXED(x_start_int);
+        const fixed_t nx_end = INT_TO_FIXED(x_end_int);
 
         // Précalculs pour l'interpolation des UV
-        if (x_end != x_start)
+        if (x_end != x_start && nx_end != nx_start)
         {
-            for (int x = x_start_int; x < x_end_int; x++)
+            /*for (int x = x_start_int; x < x_end_int; x++)
             {
                 const fVector2 vec = {INT_TO_FIXED(x), fy};
                 
                 fVector2 uv;
                 multiplyMatrixVector(matrix, vec, &uv);
-                int tex_color = get_uv_map((uv.x >> FIXED_SHIFT)*4 % 40, (uv.y >> FIXED_SHIFT)*4 % 40);
+                int tex_color = get_uv_map((uv.x >> PRECISION) % 40, (uv.y >> PRECISION) % 40);
                 DrawPixel(x, y, tex_color);
+            }*/
+            //Use slope to calculate the UV
+            fVector2 uv_start, uv_end;
+            multiplyMatrixVector(matrix, (fVector2){nx_start, fy}, &uv_start);
+            multiplyMatrixVector(matrix, (fVector2){nx_end, fy}, &uv_end);
+            fixed_t du = fdiv(uv_end.x - uv_start.x, nx_end - nx_start);
+            fixed_t dv = fdiv(uv_end.y - uv_start.y, nx_end - nx_start);
+            fixed_t u = uv_start.x;
+            fixed_t v = uv_start.y;
+            for (int x = x_start_int; x < x_end_int; x++)
+            {
+                int tex_color = get_uv_map((u >> PRECISION) % 40, (v >> PRECISION) % 40);
+                DrawPixel(x, y, tex_color);
+                u += du;
+                v += dv;
             }
         }
 
