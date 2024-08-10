@@ -411,32 +411,11 @@ void DrawFilledQuad(fVector2 points[4], int color)
     const fixed_t slope_right = slope(top_right, bottom_right);
     const fixed_t slope_bottom = slope(bottom_left, bottom_right);
 
-    int y_start = min(TO_INT(top_left.y), TO_INT(top_right.y));
-    int y_end = max(TO_INT(bottom_left.y), TO_INT(bottom_right.y));
-    int y_start_org = y_start;
-    int y_end_org = y_end;
-    y_start = max(y_start, 0);
-    y_end = min(y_end, SCREEN_HEIGHT - 1);
-
-    fixed_t fx_min = min(top_left.x, min(bottom_left.x, min(top_right.x, bottom_right.x)));
-    fixed_t fx_max = max(top_right.x, max(bottom_right.x, max(top_left.x, bottom_left.x)));
-    int x_min = TO_INT(fx_min);
-    int x_max = TO_INT(fx_max);
-
+    const int y_start = max(min(TO_INT(top_left.y), TO_INT(top_right.y)), 0);
+    const int y_end = min(max(TO_INT(bottom_left.y), TO_INT(bottom_right.y)), SCREEN_HEIGHT - 1);
     // Pré-calcul des termes constants
     const fixed_t size = INT_TO_FIXED(40);
 
-    fixed_t u, v;
-    fixed_t du, dv;
-    if (y_end_org != y_start_org)
-        dv = fdiv(size, INT_TO_FIXED(y_end_org) - INT_TO_FIXED(y_start_org));
-    else
-        dv = 0;
-    if (fx_max != fx_min)
-        du = fdiv(size, fx_max - fx_min);
-    else
-        du = 0;
-    v = (y_start - y_start_org) * dv;
     for (int y = y_start; y <= y_end; y++)
     {
         fixed_t fy = INT_TO_FIXED(y);
@@ -494,15 +473,26 @@ void DrawFilledQuad(fVector2 points[4], int color)
         // Précalculs pour l'interpolation des UV
         if (x_end != x_start)
         {
-            u = (x_start_int - x_min) * du;
+            fixed_t x_1 = 0, x_2 = 0, y_1 = 0, y_2 = 0;
+            if (top_right.y != bottom_right.y)
+                y_1 = fdiv((fy - top_right.y), (bottom_right.y - top_right.y));
+            if (bottom_left.y != top_left.y)
+                y_2 = fdiv((fy - top_left.y), (bottom_left.y - top_left.y));
             for (int x = x_start_int; x < x_end_int; x++)
             {
-                int tex_color = get_uv_map((u*4 >> FIXED_SHIFT) % 40, (v*4 >> FIXED_SHIFT) % 40);
+                fixed_t fx = INT_TO_FIXED(x);
+                
+                if (top_left.x != top_right.x)
+                    x_1 = fdiv((fx - top_right.x), (top_left.x - top_right.x));
+                if (bottom_left.x != bottom_right.x)
+                    x_2 = fdiv((fx - bottom_right.x), (bottom_left.x - bottom_right.x));
+                // Interpolation des UV
+                fixed_t u = x_1 + fmul((x_2 - x_1) , y_1);
+                fixed_t v = y_1 + fmul((y_2 - y_1) , x_1);
+                int tex_color = get_uv_map((u*40*4 >> FIXED_SHIFT) % 40, (v*40*4 >> FIXED_SHIFT) % 40);
                 DrawPixel(x, y, tex_color);
-                u += du;
             }
         }
-        v += dv;
 
     }
 }
