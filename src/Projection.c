@@ -537,104 +537,6 @@ void DrawFilledQuadTexture2(fVector2 points[4], ModeUV uv_mode)
 }
 
 
-
-void DrawFilledQuadTextureTemp(fVector2 points[4], ModeUV uv_mode)
-{
-    fVector2 top_right = points[0];
-    fVector2 top_left = points[1];
-    fVector2 bottom_left = points[2];
-    fVector2 bottom_right = points[3];
-
-    if (top_left.y > bottom_left.y)
-    {
-        top_left = points[2];
-        bottom_left = points[3];
-        bottom_right = points[0];
-        top_right = points[1];
-    }
-
-    const fixed_t size = INT_TO_FIXED(16);
-    const fVector2 start_tex = {0, size*3};
-    const fVector2 end_tex = {size, size*4};
-
-    fVector2 uv_coords[4] = {{start_tex.x, start_tex.y},
-                        {end_tex.x, start_tex.y},
-                        {end_tex.x, end_tex.y},
-                        {start_tex.x, end_tex.y}};
-
-    const fixed_t slope_top = slope(top_left, top_right);
-    const fixed_t slope_left = slope(top_left, bottom_left);
-    const fixed_t slope_right = slope(top_right, bottom_right);
-    const fixed_t slope_bottom = slope(bottom_left, bottom_right);
-
-    const int y_start = max(min(TO_INT(top_left.y), TO_INT(top_right.y)), 0);
-    const int y_end = min(max(TO_INT(bottom_left.y), TO_INT(bottom_right.y)), SCREEN_HEIGHT - 1);
-
-    
-    for (int y = y_start; y < y_end; y++)
-    {
-        fixed_t fy = INT_TO_FIXED(y);
-
-        fixed_t x_start, x_end;
-        if (fy < top_left.y)
-        {
-            x_start = top_left.x;
-            if (slope_top)
-                x_start += fdiv(fy - top_left.y, slope_top);
-        }
-        else if (fy <= bottom_left.y)
-        {
-            x_start = top_left.x;
-            if (slope_left)
-                x_start += fdiv(fy - top_left.y, slope_left);
-        }
-        else
-        {
-            x_start = bottom_left.x;
-            if (slope_bottom)
-                x_start += fdiv(fy - bottom_left.y, slope_bottom);
-        }
-
-        if (fy < top_right.y)
-        {
-            x_end = top_right.x;
-            if (slope_top)
-                x_end += fdiv(fy - top_right.y, slope_top);
-        }
-        else if (fy <= bottom_right.y)
-        {
-            x_end = top_right.x;
-            if (slope_right)
-                x_end += fdiv(fy - top_right.y, slope_right);
-        }
-        else
-        {
-            x_end = bottom_right.x;
-            if (slope_bottom)
-                x_end += fdiv(fy - bottom_right.y, slope_bottom);
-        }
-
-        if (x_start > x_end)
-            swap(&x_start, &x_end);
-
-        int x_start_int = TO_INT(x_start);
-        int x_end_int = TO_INT(x_end);
-        if (y < 0 || y >= SCREEN_HEIGHT)
-            continue;
-        x_start_int = max(min(x_start_int, SCREEN_WIDTH - 1), 0);
-        x_end_int = max(min(x_end_int, SCREEN_WIDTH - 1), 0);
-
-        for (int x = x_start_int; x < x_end_int; x++)
-        {
-            //int tex_color = get_uv_map_img((u >> PRECISION), (v >> PRECISION));
-            DrawPixel(x, y, C_WHITE);
-        }
-
-    }
-}
-
-
-
 void DrawFilledQuadTexture(fVector2 points[4], ModeUV uv_mode)
 {
     fVector2 top_right = points[0];
@@ -702,46 +604,49 @@ void DrawFilledQuadTexture(fVector2 points[4], ModeUV uv_mode)
             x_start = top_left.x;
             u_start = uv_coords[0].x;
             v_start = uv_coords[0].y;
+            fixed_t rt = fy - top_left.y;
 
             if (slope_top)
             {
-                x_start += fdiv(fy - top_left.y, slope_top);
+                x_start += fdiv(rt, slope_top);
             }
             if (uv_slope_top.x)
-                u_start += fdiv(fy - top_left.y, uv_slope_top.x);
+                u_start += fdiv(rt, uv_slope_top.x);
             if (uv_slope_top.y)
-                v_start += fdiv(fy - top_left.y, uv_slope_top.y);
+                v_start += fdiv(rt, uv_slope_top.y);
         }
         else if (fy <= bottom_left.y)
         {
             x_start = top_left.x;
             u_start = uv_coords[0].x;
             v_start = uv_coords[0].y;
+            fixed_t rt = fy - top_left.y;
 
             if (slope_left)
             {
-                x_start += fdiv(fy - top_left.y, slope_left);
+                x_start += fdiv(rt, slope_left);
             }
             if (uv_slope_left.x)
-                u_start += fdiv(fy - top_left.y, uv_slope_left.x);
+                u_start += fdiv(rt, uv_slope_left.x);
             if (uv_slope_left.y)
-                v_start += fdiv(fy - top_left.y, uv_slope_left.y);
+                v_start += fdiv(rt, uv_slope_left.y);
         }
         else
         {
             x_start = bottom_left.x;
             u_start = uv_coords[3].x;
             v_start = uv_coords[3].y;
+            fixed_t rt = fy - bottom_left.y;
 
             if (slope_bottom)
             {
-                x_start += fdiv(fy - bottom_left.y, slope_bottom);
+                x_start += fdiv(rt, slope_bottom);
                 
             }
             if (uv_slope_bottom.x)
-                u_start += fdiv(fy - bottom_left.y, uv_slope_bottom.x);
+                u_start += fdiv(rt, uv_slope_bottom.x);
             if (uv_slope_bottom.y)
-                v_start += fdiv(fy - bottom_left.y, uv_slope_bottom.y);
+                v_start += fdiv(rt, uv_slope_bottom.y);
         }
 
         if (fy < top_right.y)
@@ -749,45 +654,48 @@ void DrawFilledQuadTexture(fVector2 points[4], ModeUV uv_mode)
             x_end = top_right.x;
             u_end = uv_coords[1].x;
             v_end = uv_coords[1].y;
+            fixed_t rt = fy - top_right.y;
 
             if (slope_top)
             {
-                x_end += fdiv(fy - top_right.y, slope_top);
+                x_end += fdiv(rt, slope_top);
             }
             if (uv_slope_top.x)
-                u_end += fdiv(fy - top_right.y, uv_slope_top.x);
+                u_end += fdiv(rt, uv_slope_top.x);
             if (uv_slope_top.y)
-                v_end += fdiv(fy - top_right.y, uv_slope_top.y);
+                v_end += fdiv(rt, uv_slope_top.y);
         }
         else if (fy <= bottom_right.y)
         {
             x_end = top_right.x;
             u_end = uv_coords[1].x;
             v_end = uv_coords[1].y;
+            fixed_t rt = fy - top_right.y;
 
             if (slope_right)
             {
-                x_end += fdiv(fy - top_right.y, slope_right);
+                x_end += fdiv(rt, slope_right);
             }
             if (uv_slope_right.x)
-                u_end += fdiv(fy - top_right.y, uv_slope_right.x);
+                u_end += fdiv(rt, uv_slope_right.x);
             if (uv_slope_right.y)
-                v_end += fdiv(fy - top_right.y, uv_slope_right.y);
+                v_end += fdiv(rt, uv_slope_right.y);
         }
         else
         {
             x_end = bottom_right.x;
             u_end = uv_coords[2].x;
             v_end = uv_coords[2].y;
+            fixed_t rt = fy - bottom_right.y;
 
             if (slope_bottom)
             {
-                x_end += fdiv(fy - bottom_right.y, slope_bottom);
+                x_end += fdiv(rt, slope_bottom);
             }
             if (uv_slope_bottom.x)
-                u_end += fdiv(fy - bottom_right.y, uv_slope_bottom.x);
+                u_end += fdiv(rt, uv_slope_bottom.x);
             if (uv_slope_bottom.y)
-                v_end += fdiv(fy - bottom_right.y, uv_slope_bottom.y);
+                v_end += fdiv(rt, uv_slope_bottom.y);
         }
 
         if (x_start > x_end)
