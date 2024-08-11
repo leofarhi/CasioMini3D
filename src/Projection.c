@@ -1,6 +1,8 @@
 #include "Projection.h"
 #include <math.h>
 
+extern bopti_image_t IMG_ASSET_blocks;
+
 int uv_map[40*40];
 
 void set_uv_map(int x, int y, int color)
@@ -11,6 +13,21 @@ void set_uv_map(int x, int y, int color)
 int get_uv_map(int x, int y)
 {
     return uv_map[x + y * 40];
+}
+
+int GetPixel_CG_P8(bopti_image_t* img, int x, int y){
+    void *data = img->data + y * img->stride;
+    uint8_t *data_u8 = data;
+    return (int8_t)data_u8[x];
+}
+
+int DecodePixel_CG_P8(bopti_image_t* img, int pixel){
+    return img->palette[pixel+128];
+}
+
+int get_uv_map_img(int x, int y)
+{
+    return DecodePixel_CG_P8(&IMG_ASSET_blocks, GetPixel_CG_P8(&IMG_ASSET_blocks, x, y));
 }
 
 void init_uv_map()
@@ -396,10 +413,15 @@ void DrawFilledQuad(fVector2 points[4], int color)
         top_right = points[1];
     }
 
-    const fixed_t size = INT_TO_FIXED(40)*4;
+    const fixed_t size = INT_TO_FIXED(16);
+    const fVector2 start_tex = {0, size*3};
+    const fVector2 end_tex = {size, size*4};
 
     fixed_t matrix[3][3];
-    fVector2 src[4] = {{0, 0}, {size, 0}, {size, size}, {0, size}};
+    fVector2 src[4] = {{start_tex.x, start_tex.y},
+                        {end_tex.x - FIXED_ONE, start_tex.y},
+                        {end_tex.x - FIXED_ONE, end_tex.y - FIXED_ONE},
+                        {start_tex.x, end_tex.y - FIXED_ONE}};
     fVector2 dest[4] = {top_left, top_right, bottom_right, bottom_left};
     computePerspectiveMatrix(dest, src, matrix);
 
@@ -470,7 +492,7 @@ void DrawFilledQuad(fVector2 points[4], int color)
         // Précalculs pour l'interpolation des UV
         if (x_end != x_start && nx_end != nx_start)
         {
-            for (int x = x_start_int; x < x_end_int; x++)
+            /*for (int x = x_start_int; x < x_end_int; x++)
             {
                 const fVector2 vec = {INT_TO_FIXED(x), fy};
                 
@@ -478,22 +500,22 @@ void DrawFilledQuad(fVector2 points[4], int color)
                 multiplyMatrixVector(matrix, vec, &uv);
                 int tex_color = get_uv_map((uv.x >> PRECISION) % 40, (uv.y >> PRECISION) % 40);
                 DrawPixel(x, y, tex_color);
-            }
+            }*/
             //Use slope to calculate the UV
-            /*fVector2 uv_start, uv_end;
+            fVector2 uv_start, uv_end;
             multiplyMatrixVector(matrix, (fVector2){nx_start, fy}, &uv_start);
             multiplyMatrixVector(matrix, (fVector2){nx_end, fy}, &uv_end);
             fixed_t du = fdiv(uv_end.x - uv_start.x, nx_end - nx_start);
             fixed_t dv = fdiv(uv_end.y - uv_start.y, nx_end - nx_start);
-            fixed_t u = uv_start.x;
-            fixed_t v = uv_start.y;
+            fixed_t u = fixed_abs(uv_start.x);
+            fixed_t v = fixed_abs(uv_start.y)+FIXED_ONE;
             for (int x = x_start_int; x < x_end_int; x++)
             {
-                int tex_color = get_uv_map((u >> PRECISION) % 40, (v >> PRECISION) % 40);
+                int tex_color = get_uv_map_img((u >> PRECISION), (v >> PRECISION));
                 DrawPixel(x, y, tex_color);
                 u += du;
                 v += dv;
-            }*/
+            }
         }
 
     }

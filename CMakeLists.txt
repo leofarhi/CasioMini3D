@@ -23,7 +23,7 @@ set(ASSETS_fx)
 
 set(ASSETS_cg
   #/*<IMG_CG>*/
-
+assets/Textures-16.png
 #/*</IMG_CG>*/
   # ...
 )
