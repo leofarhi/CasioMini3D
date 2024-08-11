@@ -11,6 +11,8 @@
 #include <gint/clock.h>
 #include <gint/dma.h>
 
+void gint_dhline(int x1, int x2, int y, color_t color);
+
 #include <math.h>
 #include <stddef.h>
 #include <stdio.h>
