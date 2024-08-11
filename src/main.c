@@ -7,13 +7,16 @@
 
 #include "Projection.h"
 
-RenderQuad quads[512];
+#define MAX_QUADS 512
+
+RenderQuad quads[MAX_QUADS];
 size_t quad_count = 0;
 float rotation = 0;
+DrawMode mode = DRAW_TEXTURE;
 
-void AddQuad(fVector3 points[4], int color)
+void AddQuad(fVector3 points[4], int color, DrawMode mode, ModeUV uv_mode)
 {
-    if (quad_count >= 512)
+    if (quad_count >= MAX_QUADS)
         return;
     int z = (points[0].z + points[1].z + points[2].z + points[3].z) / 4;
     quads[quad_count].points[0] = (fVector2){points[0].x, points[0].y};
@@ -22,6 +25,8 @@ void AddQuad(fVector3 points[4], int color)
     quads[quad_count].points[3] = (fVector2){points[3].x, points[3].y};
     quads[quad_count].z = z;
     quads[quad_count].color = color;
+    quads[quad_count].mode = mode;
+    quads[quad_count].uv_mode = uv_mode;
     quad_count++;
 }
 
@@ -45,7 +50,19 @@ void DrawQuads()
 {
     for (size_t i = 0; i < quad_count; i++)
     {
-        DrawFilledQuad(quads[i].points, quads[i].color);
+        //DrawFilledQuad(quads[i].points, quads[i].color);
+        switch (quads[i].mode)
+        {
+            case DRAW_WIREFRAME:
+                DrawWireframeQuad(quads[i].points, quads[i].color);
+                break;
+            case DRAW_COLOR:
+                DrawFilledQuadColor(quads[i].points, quads[i].color);
+                break;
+            case DRAW_TEXTURE:
+                DrawFilledQuadTexture(quads[i].points, quads[i].uv_mode);
+                break;
+        }
     }
     quad_count = 0;
 }
@@ -85,34 +102,20 @@ int DetectInRange(Camera* camera, Vector3 position)
 }
 
 
-void DrawLinesCube(Vertex vertices[8])
-{
-    for (size_t i = 0; i < 8; i++)
-    {
-        for (size_t j = 0; j < 8; j++)
-        {
-            if (vertices[i].projected.z <= 1 || vertices[j].projected.z <= 1)
-                continue;
-            if (i != j)
-                dline(vertices[i].projected.x,vertices[i].projected.y,
-                        vertices[j].projected.x,vertices[j].projected.y,
-                        C_RED);
-        }
-    }
-}
+
 
 void DrawFilledCube(fVector3 render_points[8])
 {
-    //AddQuad((fVector3[]){render_points[0], render_points[1], render_points[2], render_points[3]}, C_WHITE);
-    AddQuad((fVector3[]){render_points[4], render_points[5], render_points[6], render_points[7]}, C_WHITE);
+    //AddQuad((fVector3[]){render_points[0], render_points[1], render_points[2], render_points[3]}, C_WHITE, mode, UV_LINEAR);
+    AddQuad((fVector3[]){render_points[4], render_points[5], render_points[6], render_points[7]}, C_WHITE, mode, UV_LINEAR);
     if (render_points[0].y < render_points[4].y)
-        AddQuad((fVector3[]){render_points[0], render_points[1], render_points[5], render_points[4]}, C_BLUE);
+        AddQuad((fVector3[]){render_points[0], render_points[1], render_points[5], render_points[4]}, C_BLUE, mode, UV_LINEAR);
     if (render_points[5].x < render_points[1].x)
-        AddQuad((fVector3[]){render_points[5], render_points[1], render_points[2], render_points[6]}, C_GREEN);
+        AddQuad((fVector3[]){render_points[5], render_points[1], render_points[2], render_points[6]}, C_GREEN, mode, UV_NEAREST);
     if (render_points[6].y < render_points[2].y)
-        AddQuad((fVector3[]){render_points[3], render_points[2], render_points[6], render_points[7]}, C_BLUE);
+        AddQuad((fVector3[]){render_points[3], render_points[2], render_points[6], render_points[7]}, C_BLUE, mode, UV_LINEAR);
     if (render_points[3].x < render_points[7].x)
-        AddQuad((fVector3[]){render_points[0], render_points[4], render_points[7], render_points[3]}, C_GREEN);
+        AddQuad((fVector3[]){render_points[0], render_points[4], render_points[7], render_points[3]}, C_GREEN, mode, UV_NEAREST);
 }
 
 void DrawBlock(Camera* camera, Vector3 position)
@@ -144,7 +147,6 @@ void DrawBlock(Camera* camera, Vector3 position)
         vertices[6].projected,
         vertices[7].projected
     };
-    //DrawLinesCube(vertices);
     DrawFilledCube(render_points);
     
     
@@ -194,6 +196,12 @@ int main(){
 
         camera.transform.rotation.x = clamp(camera.transform.rotation.x, -M_PI_2/3, M_PI_2/3);
         camera.transform.rotation.y = clamp(camera.transform.rotation.y, -M_PI_2/3, M_PI_2/3);
+
+        if(keydown(KEY_SHIFT))
+        {
+            while(keydown(KEY_SHIFT)){clearevents();}
+            mode = (mode + 1) % 3;
+        }
 
         SortQuads();
         DrawQuads();

@@ -31,6 +31,19 @@
 #define SCREEN_WIDTH 396
 #define SCREEN_HEIGHT 224
 
+typedef enum DrawMode
+{
+    DRAW_WIREFRAME,
+    DRAW_COLOR,
+    DRAW_TEXTURE
+} DrawMode;
+
+typedef enum ModeUV
+{
+    UV_LINEAR,
+    UV_NEAREST
+} ModeUV;
+
 typedef struct Vector3
 {
     int x;
@@ -82,6 +95,8 @@ typedef struct RenderQuad
     fVector2 points[4];
     int z;
     int color;
+    DrawMode mode;
+    ModeUV uv_mode;
 } RenderQuad;
 
 typedef struct Mesh
@@ -116,7 +131,11 @@ fixed_t fcos_approx(fixed_t i);
 
 
 void DrawPixel(int x, int y, int color);
-void DrawFilledQuad(fVector2 points[4], int color);
+
+void DrawWireframeQuad(fVector2 points[4], int color);
+
 void DrawFilledQuadColor(fVector2 points[4], int color);
+
+void DrawFilledQuadTexture(fVector2 points[4], ModeUV uv_mode);
 
 #endif // PROJECTION_H
