@@ -18,7 +18,7 @@ void AddQuad(fVector3 points[4], int color, DrawMode mode, ModeUV uv_mode)
 {
     if (quad_count >= MAX_QUADS)
         return;
-    int z = (points[0].z + points[1].z + points[2].z + points[3].z) / 4;
+    fixed_t z = (points[0].z + points[1].z + points[2].z + points[3].z) / 4;
     quads[quad_count].points[0] = (fVector2){points[0].x, points[0].y};
     quads[quad_count].points[1] = (fVector2){points[1].x, points[1].y};
     quads[quad_count].points[2] = (fVector2){points[2].x, points[2].y};
@@ -158,7 +158,7 @@ int main(){
     srand(time(NULL));
     //clock_set_speed(CLOCK_SPEED_F5);
     init_uv_map();
-    Camera camera = (Camera){(Vector3){0,0,-500},(Vector3f){0,0,0},(Vector3f){1,1,1}};
+    Camera camera = (Camera){(Vector3){0,0,-600},(Vector3f){0,0,0},(Vector3f){1,1,1}};
     while (!keydown(KEY_MENU))
     {
         dclear(C_BLACK);

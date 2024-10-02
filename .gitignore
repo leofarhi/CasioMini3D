@@ -59,3 +59,10 @@ make.bat
 3D.g3a
 .vscode/*
 test/*
+/v1/.vscode
+/V2/build-cg
+/v1/build-cg
+/v1/Azur
+/v1/src/.vscode
+src/.vscode/settings.json
+/V2/.vscode

@@ -95,7 +95,7 @@ typedef struct Vertex
 typedef struct RenderQuad
 {
     fVector2 points[4];
-    int z;
+    fixed_t z;
     int color;
     DrawMode mode;
     ModeUV uv_mode;
