@@ -1,5 +1,8 @@
-#include "world.hpp"
 #include "display.hpp"
+#include "fixed.hpp"
+#include "types.hpp"
+#include "world.hpp"
+#include <algorithm>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -18,11 +21,28 @@ void dclock()
     dtext(0, 0, C_WHITE, buffer);
     lastTime = clock();
 }
-
 int main(){
+    //clock_set_speed(CLOCK_SPEED_F5);
     srand(time(NULL));
     init_uv_map();
-    //clock_set_speed(CLOCK_SPEED_F5);
+    /*Quad quad;
+    quad.points[0] = Vector2<int>(100, 100);
+    quad.points[1] = Vector2<int>(200, 100);
+    quad.points[2] = Vector2<int>(200, 200);
+    quad.points[3] = Vector2<int>(100, 200);
+    quad.uv[0] = Vector2<float>(0, 0);
+    quad.uv[1] = Vector2<float>(1, 0);
+    quad.uv[2] = Vector2<float>(1, 1);
+    quad.uv[3] = Vector2<float>(0, 1);
+    while (true)
+    {
+        dclear(C_BLACK);
+        clearevents();
+        for (size_t i = 0; i < 100; i++)
+            DrawQuad(quad);
+        dclock();
+        dupdate();
+    }*/
     Camera *camera = new Camera(Vector3<int>(0, 100, -300), 0);
     World *world = new World(16, 16, 16, new Block*[2]{nullptr,new Cube()});
     world->set_id_unsafe(0, 0, 0, 1);
@@ -31,10 +51,6 @@ int main(){
     {
         world->set_id_unsafe(rand() % 16, rand() % 16, rand() % 16, 1);
     }
-    /*for (size_t i = 0; i < 16*16; i++)
-    {
-        world->set_id_unsafe(i/16, 0, i%16, 1);
-    }*/
     while (!keydown(KEY_MENU))
     {
         dclear(C_BLACK);
@@ -56,9 +72,9 @@ int main(){
             camera->position.y -= 10;
 
         if(keydown(KEY_7))
-            camera->angle += 1;
+            camera->angle += 3;
         if(keydown(KEY_1))
-            camera->angle -= 1;
+            camera->angle -= 3;
 
         if(keydown(KEY_9))
             camera->offset.y -= 10;
